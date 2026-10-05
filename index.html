@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#101b31">
+  <title>Housie Caller</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --page: #0b1220;
+      --panel: #141f33;
+      --panel-light: #1b2941;
+      --line: #2b3a54;
+      --text: #f4f7fc;
+      --muted: #9eacc2;
+      --accent: #ffcb66;
+      --accent-dark: #d99a32;
+      --marked: #42d6a4;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      min-height: 100vh;
+      margin: 0;
+      padding: 32px 18px 48px;
+      background:
+        radial-gradient(ellipse at 50% -15%, #243657 0, transparent 48%),
+        var(--page);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    .app { width: min(980px, 100%); margin: 0 auto; }
+
+    header { text-align: center; margin-bottom: 28px; }
+
+    .eyebrow {
+      margin: 0 0 8px;
+      color: var(--accent);
+      font-size: 0.75rem;
+      font-weight: 800;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2rem, 6vw, 3.25rem);
+      letter-spacing: -0.055em;
+    }
+
+    .subtitle { margin: 9px 0 0; color: var(--muted); }
+
+    .caller {
+      display: grid;
+      grid-template-columns: minmax(150px, 0.8fr) minmax(260px, 1.2fr);
+      gap: 22px;
+      align-items: stretch;
+      margin-bottom: 22px;
+    }
+
+    .current-card, .controls, .board-card, .history-card {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: linear-gradient(145deg, #19263c, var(--panel) 72%);
+      box-shadow: 0 18px 48px #0003;
+    }
+
+    .current-card {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 225px;
+      padding: 20px;
+    }
+
+    .current-label, .section-label {
+      color: var(--muted);
+      font-size: 0.76rem;
+      font-weight: 750;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .current-number {
+      display: grid;
+      place-items: center;
+      width: 132px;
+      height: 132px;
+      margin-top: 12px;
+      border: 5px solid #ffcb6666;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #261a08;
+      font-size: 4.2rem;
+      font-weight: 900;
+      line-height: 1;
+      box-shadow: 0 0 42px #ffcb6633;
+    }
+
+    .current-number.empty {
+      border-color: var(--line);
+      background: var(--panel-light);
+      color: #8190a8;
+      box-shadow: none;
+    }
+
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      padding: clamp(22px, 5vw, 38px);
+    }
+
+    .controls h2 { margin: 0 0 8px; font-size: 1.35rem; }
+    .controls p { margin: 0 0 22px; color: var(--muted); line-height: 1.55; }
+
+    button {
+      min-height: 48px;
+      border: 0;
+      border-radius: 12px;
+      font: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 120ms ease, filter 120ms ease, background 120ms ease;
+    }
+
+    button:hover:not(:disabled) { filter: brightness(1.08); transform: translateY(-1px); }
+    button:active:not(:disabled) { transform: translateY(1px); }
+    button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+
+    .draw-button {
+      width: 100%;
+      min-height: 58px;
+      background: var(--accent);
+      color: #261a08;
+      font-size: 1.08rem;
+      box-shadow: 0 8px 24px #ffcb6625;
+    }
+
+    .draw-button:disabled { cursor: not-allowed; opacity: 0.65; }
+
+    .button-row { display: flex; align-items: center; gap: 12px; width: 100%; }
+
+    .reset-button {
+      flex: 0 0 auto;
+      padding: 0 17px;
+      border: 1px solid var(--line);
+      background: var(--panel-light);
+      color: var(--text);
+    }
+
+    .status {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 16px;
+      color: var(--muted);
+      font-size: 0.9rem;
+    }
+
+    .status strong { color: var(--text); }
+
+    .board-card { padding: clamp(18px, 4vw, 28px); }
+    .board-heading, .history-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .board-heading h2, .history-heading h2 { margin: 0; font-size: 1.05rem; }
+    .legend { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 0.82rem; }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; background: var(--marked); }
+
+    .board {
+      display: grid;
+      grid-template-columns: repeat(10, minmax(0, 1fr));
+      gap: clamp(5px, 1.15vw, 10px);
+    }
+
+    .cell {
+      display: grid;
+      place-items: center;
+      aspect-ratio: 1;
+      min-width: 0;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #101a2b;
+      color: #c7d1e0;
+      font-size: clamp(0.76rem, 2.1vw, 1.05rem);
+      font-variant-numeric: tabular-nums;
+      font-weight: 750;
+      transition: background 160ms ease, color 160ms ease, transform 160ms ease;
+    }
+
+    .cell.called {
+      border-color: #42d6a488;
+      background: var(--marked);
+      color: #08251c;
+      transform: scale(1.04);
+    }
+
+    .history-card { margin-top: 22px; padding: 22px 26px; }
+    .history-heading { margin-bottom: 12px; }
+    .history-count { color: var(--muted); font-size: 0.88rem; }
+    .history-list { display: flex; flex-wrap: wrap; gap: 8px; min-height: 34px; }
+
+    .history-chip {
+      display: grid;
+      place-items: center;
+      min-width: 38px;
+      height: 34px;
+      padding: 0 9px;
+      border: 1px solid #ffcb6644;
+      border-radius: 999px;
+      background: #ffcb6618;
+      color: var(--accent);
+      font-size: 0.9rem;
+      font-variant-numeric: tabular-nums;
+      font-weight: 800;
+    }
+
+    .empty-history { align-self: center; color: var(--muted); font-size: 0.9rem; }
+
+    @media (max-width: 640px) {
+      body { padding: 24px 12px 32px; }
+      header { margin-bottom: 20px; }
+      .caller { grid-template-columns: 1fr; gap: 12px; }
+      .current-card { min-height: 185px; }
+      .current-number { width: 112px; height: 112px; font-size: 3.6rem; }
+      .controls { padding: 22px; }
+      .board-card { padding: 14px 10px; border-radius: 15px; }
+      .cell { border-radius: 7px; }
+      .history-card { padding: 18px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <header>
+      <p class="eyebrow">In-house game caller</p>
+      <h1>Housie</h1>
+      <p class="subtitle">One number at a time. No repeats. All the way from 1 to 100.</p>
+    </header>
+
+    <section class="caller" aria-label="Number caller">
+      <div class="current-card">
+        <span class="current-label">Number called</span>
+        <div class="current-number empty" id="currentNumber" aria-live="assertive" aria-atomic="true">--</div>
+      </div>
+
+      <div class="controls">
+        <h2 id="promptTitle">Ready to play?</h2>
+        <p id="promptText">Click the button to draw a random number. Each number is called only once.</p>
+        <div class="button-row">
+          <button class="draw-button" id="drawButton" type="button">Draw next number</button>
+          <button class="reset-button" id="resetButton" type="button" aria-label="Start a new game">New game</button>
+        </div>
+        <div class="status" aria-live="polite">
+          <span>Called: <strong id="calledCount">0</strong> / 100</span>
+          <span>Remaining: <strong id="remainingCount">100</strong></span>
+        </div>
+      </div>
+    </section>
+
+    <section class="board-card" aria-labelledby="boardTitle">
+      <div class="board-heading">
+        <h2 id="boardTitle">Housie board</h2>
+        <span class="legend"><span class="legend-dot" aria-hidden="true"></span> Called</span>
+      </div>
+      <div class="board" id="board" role="grid" aria-label="Numbers 1 to 100"></div>
+    </section>
+
+    <section class="history-card" aria-labelledby="historyTitle">
+      <div class="history-heading">
+        <h2 id="historyTitle">Call history</h2>
+        <span class="history-count" id="historyCount">Oldest first</span>
+      </div>
+      <div class="history-list" id="historyList" aria-label="Numbers called, oldest first">
+        <span class="empty-history">Your called numbers will appear here.</span>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const board = document.getElementById("board");
+    const drawButton = document.getElementById("drawButton");
+    const resetButton = document.getElementById("resetButton");
+    const currentNumber = document.getElementById("currentNumber");
+    const calledCount = document.getElementById("calledCount");
+    const remainingCount = document.getElementById("remainingCount");
+    const historyList = document.getElementById("historyList");
+    const promptTitle = document.getElementById("promptTitle");
+    const promptText = document.getElementById("promptText");
+    const numbers = [];
+    const calledNumbers = [];
+    const cells = new Map();
+
+    for (let number = 1; number <= 100; number += 1) {
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.setAttribute("role", "gridcell");
+      cell.setAttribute("aria-label", `Number ${number}, not called`);
+      cell.textContent = String(number);
+      board.appendChild(cell);
+      cells.set(number, cell);
+    }
+
+    function updateHistory() {
+      historyList.replaceChildren();
+      if (calledNumbers.length === 0) {
+        const emptyMessage = document.createElement("span");
+        emptyMessage.className = "empty-history";
+        emptyMessage.textContent = "Your called numbers will appear here.";
+        historyList.appendChild(emptyMessage);
+        return;
+      }
+
+      for (const number of calledNumbers) {
+        const chip = document.createElement("span");
+        chip.className = "history-chip";
+        chip.textContent = String(number);
+        chip.setAttribute("aria-label", `Number ${number}`);
+        historyList.appendChild(chip);
+      }
+    }
+
+    function drawNumber() {
+      if (numbers.length === 0) return;
+
+      const number = numbers.pop();
+      calledNumbers.push(number);
+      currentNumber.textContent = String(number);
+      currentNumber.classList.remove("empty");
+      const cell = cells.get(number);
+      cell.classList.add("called");
+      cell.setAttribute("aria-label", `Number ${number}, called`);
+
+      calledCount.textContent = String(calledNumbers.length);
+      remainingCount.textContent = String(numbers.length);
+      updateHistory();
+
+      if (numbers.length === 0) {
+        drawButton.disabled = true;
+        drawButton.textContent = "All numbers called";
+        promptTitle.textContent = "Game complete!";
+        promptText.textContent = "All 100 numbers have been called. Start a new game to play again.";
+      } else {
+        promptTitle.textContent = "Number called!";
+        promptText.textContent = "Click again when you are ready for the next number.";
+      }
+    }
+
+    function startNewGame() {
+      numbers.length = 0;
+      calledNumbers.length = 0;
+      for (let number = 1; number <= 100; number += 1) {
+        numbers.push(number);
+        const cell = cells.get(number);
+        cell.classList.remove("called");
+        cell.setAttribute("aria-label", `Number ${number}, not called`);
+      }
+
+      for (let index = numbers.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        [numbers[index], numbers[swapIndex]] = [numbers[swapIndex], numbers[index]];
+      }
+
+      currentNumber.textContent = "--";
+      currentNumber.classList.add("empty");
+      calledCount.textContent = "0";
+      remainingCount.textContent = "100";
+      drawButton.disabled = false;
+      drawButton.textContent = "Draw next number";
+      promptTitle.textContent = "Ready to play?";
+      promptText.textContent = "Click the button to draw a random number. Each number is called only once.";
+      updateHistory();
+    }
+
+    drawButton.addEventListener("click", drawNumber);
+    resetButton.addEventListener("click", startNewGame);
+    startNewGame();
+  </script>
+</body>
+</html>
